@@ -1,21 +1,33 @@
-@::-----UAC Prompt----------------------------------
 @echo off
+
+::-------------------- Configuration --------------------
+set noInstallCurl=1
+set debug=
+
+::-------------------- Variables --------------------
+set title=Java removal/update tool v0.9
+
+::-----UAC Prompt----------------------------------
 NET SESSION >nul 2>&1 && goto noUAC
-title.
+title %title%
 set n=%0 %*
 set n=%n:"=" ^& Chr(34) ^& "%
 echo Set objShell = CreateObject("Shell.Application")>"%tmp%\cmdUAC.vbs"
-echo objShell.ShellExecute "cmd.exe", "/c start " ^& Chr(34) ^& "." ^& Chr(34) ^& " /d " ^& Chr(34) ^& "%CD%" ^& Chr(34) ^& " cmd /c %n%", "", "runas", ^1>>"%tmp%\cmdUAC.vbs"
+echo objShell.ShellExecute "cmd.exe", "/c start " ^& Chr(34) ^& "%title%" ^& Chr(34) ^& " /d " ^& Chr(34) ^& "%CD%" ^& Chr(34) ^& " cmd /c %n%", "", "runas", ^1>>"%tmp%\cmdUAC.vbs"
 echo Not Admin, Attempting to elevate...
 cscript "%tmp%\cmdUAC.vbs" //Nologo
 del "%tmp%\cmdUAC.vbs"
 exit /b
 :noUAC
 
+::-------------------- Initialize --------------------
 setlocal enableextensions enabledelayedexpansion
 color 17
-title Java removal/update tool v0.9
+title %title%
 
+if defined debug goto quickstart
+
+::-------------------- Messages --------------------
 echo.
 echo This software is brought to you by Grintor.
 echo ^<Grintor at Gmail dot Com^>
@@ -23,7 +35,7 @@ echo.
 echo This program is free software.
 echo This program IS PROVIDED WITHOUT WARRANTY, EITHER EXPRESSED OR IMPLIED.
 echo This program is copyrighted under the terms of GPLv3:
-echo see ^<http://www.gnu.org/licenses/^>.
+echo see ^<https://www.gnu.org/licenses/gpl-3.0-standalone.html^>.
 echo.
 FOR /L %%n IN (1,1,10) DO ping -n 2 127.0.0.1 > nul & <nul set /p =.
 cls
@@ -34,18 +46,27 @@ echo.
 FOR /L %%n IN (1,1,10) DO ping -n 2 127.0.0.1 > nul & <nul set /p =.
 cls
 
-curl -V  >nul 2>&1 || echo Installing cURL... && start /wait msiexec /i https://s3.amazonaws.com/grintor-public/curl.msi /q
-
+:quickstart
+::-------------------- Check cURL --------------------
 cls
+echo.
+echo Check avaibility of cURL...
+curl -V  >nul 2>&1 || goto installcurl
+goto curlready
+:installcurl
+if defined noInstallCurl goto nocurl
+echo Installing cURL... && start /wait msiexec /i https://s3.amazonaws.com/grintor-public/curl.msi /q
+
+
+:curlready
+::----------- Find the latest java version----------------------------------
 echo.
 echo Searching for latest version of Java...
 ping -n 1 google.com > nul || goto error
 
-
-::----------- Find the latest java version----------------------------------
 FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -s -L http://javadl-esd.sun.com/update/1.8.0/map-m-1.8.0.xml ^| find /i "https:"') DO set URL1=%%n
 FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -s -L -k %URL1% ^| find /i "<version>"') DO set RemoteJavaVersionFull=%%n
-set RemoteJavaVersion=%RemoteJavaVersionFull:~0,8%
+FOR /F "tokens=1 delims=-" %%n IN ("%RemoteJavaVersionFull%") DO set RemoteJavaVersion=%%n
 echo The latest version of java is %RemoteJavaVersion%.
 
 
@@ -121,7 +142,16 @@ echo.
 ::----------- There was an error---------------------------------------------
 goto noerror
 :error
+echo.
 echo There was a network error. Please try again.
+goto noerror
+:nocurl
+echo.
+echo cURL cannot be found
+echo Please configure it manually, or change
+echo 'set noInstallCurl=1' to 'set noInstallCurl='
+echo in this batch file to allow automatic installation
+goto noerror
 :noerror
 
 endlocal
