@@ -28,7 +28,7 @@ There are some configurable options available. Open `javaUpdate.cmd` and edit th
 
 
 ## Credit
-Thanks **Grintor** for the [initial work on this script](https://github.com/grintor/Auto-Java-Updater). Thanks users who reported issues and issued pull requests to the original script so that I am able to make more adjustment and enhancement.
+Thanks **Grintor** for the [initial work on this script](https://github.com/grintor/Auto-Java-Updater). Thanks users who [reported issues](https://github.com/grintor/Auto-Java-Updater/issues) and issued [pull request](https://github.com/grintor/Auto-Java-Updater/pull/3) to the original script so that I am able to make more adjustment and enhancement.
 
 
 ## License
