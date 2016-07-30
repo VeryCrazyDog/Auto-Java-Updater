@@ -15,6 +15,7 @@ Double click `javaUpdate.cmd` to run the updater. Alternatively you can configur
 ## Configurable Options
 There are some configurable options available. Open `javaUpdate.cmd` and edit them in the top of the file.
 - dontInstallCurl: Whether to automatically install required program cURL. Set it to `0` to allow automaitc installation. Default is `1`.
+- verifySSL: Whether to verify the certificate when connect to server via HTTPS. Set it to `0` to disable verification. Default is `1`.
 - installJavaIfMissing: Whether to install JRE if none is found. Set it to `1` to install JRE when none is found. Default is `0`.
 
 

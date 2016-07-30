@@ -2,11 +2,17 @@
 
 ::-------------------- Options --------------------
 set dontInstallCurl=1
+set verifySSL=1
 set installJavaIfMissing=0
 
 ::-------------------- Variables --------------------
 set debug=0
 set title=Java Update Tool for JRE 8 x86 v1.0
+if '%verifySSL%'=='0' (
+  set curlExtraOptions=-k
+) else (
+  set curlExtraOptions=
+)
 
 ::-----UAC Prompt----------------------------------
 NET SESSION >nul 2>&1 && goto noUAC
@@ -71,9 +77,9 @@ echo.
 echo Searching for latest version of Java...
 ping -n 1 google.com > nul || goto error
 
-FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -f -s -L http://javadl-esd.sun.com/update/1.8.0/map-m-1.8.0.xml ^| find /i "https:"') DO set URL1=%%n
+FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -f -s -L %curlExtraOptions% http://javadl-esd.sun.com/update/1.8.0/map-m-1.8.0.xml ^| find /i "https:"') DO set URL1=%%n
 if '%%n'=='' goto downloaderror
-FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -f -s -L -k %URL1% ^| find /i "<version>"') DO set RemoteJavaVersionFull=%%n
+FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -f -s -L %curlExtraOptions% %URL1% ^| find /i "<version>"') DO set RemoteJavaVersionFull=%%n
 FOR /F "tokens=1 delims=-" %%n IN ("%RemoteJavaVersionFull%") DO set RemoteJavaVersion=%%n
 if '%RemoteJavaVersion%'=='' goto downloaderror
 if not '%RemoteJavaVersion:~0,3%'=='1.8' goto downloaderror
@@ -123,7 +129,7 @@ if '%RemoteJavaVersion%'=='%LocalJavaVersion%' (goto finished) ELSE (echo The lo
 :download
 echo Downloading latest version of Java...
 set url2=http://javadl.sun.com/webapps/download/GetFile/%RemoteJavaVersionFull%/windows-i586/xpiinstall.exe
-curl.exe -f -s -L -k -o %tmp%\java_inst.exe %url2%
+curl.exe -f -s -L %curlExtraOptions% -o %tmp%\java_inst.exe %url2%
 if ERRORLEVEL 1 goto downloaderror
 if '%LocalJavaVersion%'=='None' goto install
 
