@@ -3,9 +3,9 @@ Keep Java up to date in Windows! Remove redundant installations!
 
 Java has one MAJOR flaw in windows. You can't keep it up to date automatically. The "Auto Update" feature just downloads new updates, and doesn't install them unless you click. Also when it does install a new version, it doesn't remove the old version. That wastes space and is no good. The software helps. Schedule it to run every day and it will keep your JRE running happy!
 
-This updater only update 32-bit version of JRE.
+This updater only update 32-bit version of JRE and will install JRE 8 only.
 
-Windows XP is not supported. Tested in Windows 7 64 bit.
+Windows XP is not supported. Tested in Windows 7 32-bit and 64-bit with JRE 8.
 
 
 ## Installation
