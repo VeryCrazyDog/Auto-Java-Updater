@@ -1,11 +1,12 @@
 @echo off
 
-::-------------------- Configuration --------------------
-set noInstallCurl=1
-set debug=
+::-------------------- Options --------------------
+set dontInstallCurl=1
+set installJavaIfMissing=0
 
 ::-------------------- Variables --------------------
-set title=Java removal/update tool v0.9
+set debug=0
+set title=Java Update Tool for JRE 8 x86 v1.0
 
 ::-----UAC Prompt----------------------------------
 NET SESSION >nul 2>&1 && goto noUAC
@@ -24,12 +25,17 @@ exit /b
 setlocal enableextensions enabledelayedexpansion
 color 17
 title %title%
+echo.
+echo Started on %date% %time%
 
-if defined debug goto quickstart
+if '%debug%'=='1' goto quickstart
 
 ::-------------------- Messages --------------------
 echo.
-echo This software is brought to you by Grintor.
+echo This software is brought to you by VCD
+echo ^<https://vicidi.wordpress.com/^>
+echo.
+echo based on the original work from Grintor.
 echo ^<Grintor at Gmail dot Com^>
 echo.
 echo This program is free software.
@@ -40,7 +46,8 @@ echo.
 FOR /L %%n IN (1,1,10) DO ping -n 2 127.0.0.1 > nul & <nul set /p =.
 cls
 echo.
-echo If you find the program useful, please consider sending some Bitcoin my way:
+echo If you find the program useful, please consider sending some Bitcoin to
+echo the original author Grintor:
 echo 12iNFT3n6yXz95mYttMcXWjm8UaEHVSjjr
 echo.
 FOR /L %%n IN (1,1,10) DO ping -n 2 127.0.0.1 > nul & <nul set /p =.
@@ -48,13 +55,13 @@ cls
 
 :quickstart
 ::-------------------- Check cURL --------------------
-cls
 echo.
 echo Check avaibility of cURL...
-curl -V  >nul 2>&1 || goto installcurl
+curl -V >nul 2>&1 || goto installcurl
 goto curlready
 :installcurl
-if defined noInstallCurl goto nocurl
+if '%dontInstallCurl%'=='1' goto nocurl
+ping -n 1 google.com > nul || goto error
 echo Installing cURL... && start /wait msiexec /i https://s3.amazonaws.com/grintor-public/curl.msi /q
 
 
@@ -74,30 +81,38 @@ echo The latest version of java is %RemoteJavaVersion%.
 
 ::----------- Find the local Java version-----------------------------------
 set LocalJavaVersion=None
-FOR /F "tokens=1-15" %%n IN ('reg query HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall /s ^& reg query HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall /s 2^> nul') DO (
+if defined ProgramFiles(x86) (
+  set regPath=HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall
+) else (
+  set regPath=HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall
+)
+FOR /F "tokens=1-15" %%n IN ('reg query %regPath% /s 2^> nul') DO (
 
-   if '%%n'=='InstallSource' (
-     set p=%%p%%q%%r%%s%%t%%u%%v%%w%%x%%y%%z
-     set p=!p: =\!
-     set p=!p:\= !
-     for %%n in (!p!) do set c=%%n
-   )
+  if '%%n'=='InstallSource' (
+    set p=%%p%%q%%r%%s%%t%%u%%v%%w%%x%%y%%z
+    set p=!p: =\!
+    set p=!p:\= !
+    for %%n in (!p!) do set c=%%n
+  )
 
-   if '%%n'=='DisplayName' (
-      set p=%%p
-      if "!p:~0,4!"=="Java" if not "%%q"=="Auto" if not '!LocalJavaVersion!'=='None' (set LocalJavaVersion=Multi) ELSE (set LocalJavaVersion=!c:~3!)
-      if "!p:~0,4!"=="J2SE" if not '!LocalJavaVersion!'=='None' (set LocalJavaVersion=Multi) ELSE (set LocalJavaVersion=!c:~3!)
-   )
+  if '%%n'=='DisplayName' (
+    set p=%%p
+    if "!p:~0,4!"=="Java" if not "%%q"=="Auto" if not '!LocalJavaVersion!'=='None' (set LocalJavaVersion=Multi) ELSE (set LocalJavaVersion=!c:~3!)
+    if "!p:~0,4!"=="J2SE" if not '!LocalJavaVersion!'=='None' (set LocalJavaVersion=Multi) ELSE (set LocalJavaVersion=!c:~3!)
+  )
 )
 
-if '%LocalJavaVersion%'=='None' echo There is no local version of Java. & goto install
+if '%LocalJavaVersion%'=='None' (
+  echo There is no local version of Java.
+  if '%installJavaIfMissing%'=='1' (goto install) else (goto noerror)
+)
 if '%LocalJavaVersion%'=='Multi' echo There are multiple local versions of Java installed. & goto uninstall
 echo The local version of Java is %LocalJavaVersion%.
 
 
 
 ::----------- If they match, skip to the end---------------------------------
-if '%RemoteJavaVersion%'=='%LocalJavaVersion%' (goto finished) ELSE (echo The Local version of Java is out of date.)
+if '%RemoteJavaVersion%'=='%LocalJavaVersion%' (goto finished) ELSE (echo The local version of Java is out of date.)
 
 
 
@@ -105,18 +120,18 @@ if '%RemoteJavaVersion%'=='%LocalJavaVersion%' (goto finished) ELSE (echo The Lo
 ::----------- Uninstall all currently installed java versions----------------
 :uninstall
 if '%LocalJavaVersion%'=='Multi' (echo Uninstalling all local versions of Java...) ELSE (echo Uninstalling the local version of Java...)
-FOR /F "tokens=1-4" %%n IN ('reg query HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall /s ^& reg query HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall /s 2^> nul') DO (
+FOR /F "tokens=1-4" %%n IN ('reg query %regPath% /s 2^> nul') DO (
 
-   if '%%n'=='UninstallString' (
-     set c=%%q
-     set c=!c:/I=/X!
-   )
+  if '%%n'=='UninstallString' (
+    set c=%%q
+    set c=!c:/I=/X!
+  )
 
-   if '%%n'=='DisplayName' (
-      set d=%%p
-      if "!d:~0,4!"=="Java" if not "%%q"=="Auto" msiexec.exe !c! /qn & ping -n 11 127.0.0.1 > nul
-      if "!d:~0,4!"=="J2SE" msiexec.exe !c! /qn & ping -n 11 127.0.0.1 > nul
-   )
+  if '%%n'=='DisplayName' (
+    set d=%%p
+    if "!d:~0,4!"=="Java" if not "%%q"=="Auto" msiexec.exe !c! /qn /norestart & ping -n 11 127.0.0.1 > nul
+    if "!d:~0,4!"=="J2SE" msiexec.exe !c! /qn /norestart & ping -n 11 127.0.0.1 > nul
+  )
 )
 
 
@@ -127,7 +142,7 @@ echo Downloading latest version of Java...
 set url2=http://javadl.sun.com/webapps/download/GetFile/%RemoteJavaVersionFull%/windows-i586/xpiinstall.exe
 curl.exe -s -L -k -o %tmp%\java_inst.exe %url2%
 echo Installing latest version of Java...
-start /wait %tmp%\java_inst.exe /s
+start /wait %tmp%\java_inst.exe INSTALL_SILENT=1 REBOOT=0
 ping 127.0.0.1 > nul
 del %tmp%\java_inst.exe
 
@@ -143,13 +158,13 @@ echo.
 goto noerror
 :error
 echo.
-echo There was a network error. Please try again.
+echo There was a network error. Please check your internet connection.
 goto noerror
 :nocurl
 echo.
 echo cURL cannot be found
 echo Please configure it manually, or change
-echo 'set noInstallCurl=1' to 'set noInstallCurl='
+echo 'set dontInstallCurl=1' to 'set dontInstallCurl=0'
 echo in this batch file to allow automatic installation
 goto noerror
 :noerror
