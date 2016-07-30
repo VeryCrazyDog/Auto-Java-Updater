@@ -10,6 +10,7 @@ Windows XP is not supported. Tested in Windows 7 64 bit.
 
 ## Installation
 You will need to cURL in order to run the script. You may:
+
 1. Configure it manually by download it from https://curl.haxx.se/download.html.
 2. Allow this script to install it automatically by setting options `dontInstallCurl` to `0` and `verifySSL` to `0`. Please notice that the installation file used in automatic installation is provided by the original author of this script **Grintor** and does not support certificate verification. Use at your own risk.
 
@@ -20,6 +21,7 @@ Double click `javaUpdate.cmd` to run the updater. Alternatively you can configur
 
 ## Configurable Options
 There are some configurable options available. Open `javaUpdate.cmd` and edit them in the top of the file.
+
 - `dontInstallCurl`: Whether to automatically install required program cURL. Set it to `0` to allow automaitc installation. Default is `1`.
 - `verifySSL`: Whether to verify the certificate when connect to server via HTTPS. Set it to `0` to disable verification. Default is `1`.
 - `installJavaIfMissing`: Whether to install JRE if none is found. Set it to `1` to install JRE when none is found. Default is `0`.
