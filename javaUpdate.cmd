@@ -4,6 +4,7 @@
 set dontInstallCurl=1
 set verifySSL=1
 set installJavaIfMissing=0
+set skipIntro=0
 
 ::-------------------- Variables --------------------
 set debug=0
@@ -15,6 +16,7 @@ if '%verifySSL%'=='0' (
 )
 
 ::-----UAC Prompt----------------------------------
+if '%debug%'=='1' goto quickstart
 NET SESSION >nul 2>&1 && goto noUAC
 title %title%
 set n=%0 %*
@@ -34,6 +36,7 @@ title %title%
 echo.
 echo Started on %date% %time%
 
+if '%skipIntro%'=='1' goto quickstart
 if '%debug%'=='1' goto quickstart
 
 ::-------------------- Messages --------------------
@@ -52,9 +55,9 @@ echo.
 FOR /L %%n IN (1,1,10) DO ping -n 2 127.0.0.1 > nul & <nul set /p =.
 cls
 echo.
-echo If you find the program useful, please consider sending some Bitcoin to
+echo If you find the program useful, you may consider sending some Bitcoin to
 echo the original author Grintor:
-echo 12iNFT3n6yXz95mYttMcXWjm8UaEHVSjjr
+echo https://github.com/grintor/Auto-Java-Updater/blob/master/javaUpdate.cmd
 echo.
 FOR /L %%n IN (1,1,10) DO ping -n 2 127.0.0.1 > nul & <nul set /p =.
 cls
@@ -68,7 +71,9 @@ goto curlready
 :installcurl
 if '%dontInstallCurl%'=='1' goto nocurl
 ping -n 1 google.com > nul || goto networkError
-echo Installing cURL... && start /wait msiexec /i https://s3.amazonaws.com/grintor-public/curl.msi /q
+echo Installing cURL...
+if '%debug%'=='1' goto curlready
+start /wait msiexec /i https://s3.amazonaws.com/grintor-public/curl.msi /q
 
 :curlready
 ::----------- Find the latest java version----------------------------------
@@ -105,6 +110,7 @@ FOR /F "tokens=1-15" %%n IN ('reg query %regPath% /s 2^> nul') DO (
     if "!p:~0,4!"=="Java" if not "%%q"=="Auto" if not '!localJavaVersion!'=='None' (set localJavaVersion=Multi) ELSE (set localJavaVersion=!c:~3!)
     if "!p:~0,4!"=="J2SE" if not '!localJavaVersion!'=='None' (set localJavaVersion=Multi) ELSE (set localJavaVersion=!c:~3!)
   )
+
 )
 
 if '%localJavaVersion%'=='None' (
@@ -120,14 +126,17 @@ if '%remoteJavaVersion%'=='%localJavaVersion%' (goto finished) ELSE (echo The lo
 ::-------------------- Download the latest Java --------------------
 :download
 echo Downloading latest version of Java...
-set jreDownloadUrl=http://javadl.sun.com/webapps/download/GetFile/%RemoteJavaVersionFull%/windows-i586/xpiinstall.exe
+set jreDownloadUrl=http://javadl.sun.com/webapps/download/GetFile/%remoteJavaVersionFull%/windows-i586/xpiinstall.exe
+if '%debug%'=='1' goto skipDownload
 curl.exe -f -s -L %curlExtraOptions% -o %tmp%\java_inst.exe %jreDownloadUrl%
 if ERRORLEVEL 1 goto downloadError
+:skipDownload
 if '%localJavaVersion%'=='None' goto install
 
 ::----------- Uninstall all currently installed java versions----------------
 :uninstall
 if '%localJavaVersion%'=='Multi' (echo Uninstalling all local versions of Java...) ELSE (echo Uninstalling the local version of Java...)
+if '%debug%'=='1' goto install
 FOR /F "tokens=1-4" %%n IN ('reg query %regPath% /s 2^> nul') DO (
 
   if '%%n'=='UninstallString' (
@@ -146,7 +155,9 @@ FOR /F "tokens=1-4" %%n IN ('reg query %regPath% /s 2^> nul') DO (
 ::-------------------- Install --------------------
 :install
 echo Installing latest version of Java...
+if '%debug%'=='1' goto skipInstall
 start /wait %tmp%\java_inst.exe INSTALL_SILENT=1 REBOOT=0
+:skipInstall
 ping 127.0.0.1 > nul
 del %tmp%\java_inst.exe
 
