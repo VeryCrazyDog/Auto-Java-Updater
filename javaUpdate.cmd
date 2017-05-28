@@ -67,29 +67,25 @@ curl -V >nul 2>&1 || goto installcurl
 goto curlready
 :installcurl
 if '%dontInstallCurl%'=='1' goto nocurl
-ping -n 1 google.com > nul || goto error
+ping -n 1 google.com > nul || goto networkError
 echo Installing cURL... && start /wait msiexec /i https://s3.amazonaws.com/grintor-public/curl.msi /q
-
 
 :curlready
 ::----------- Find the latest java version----------------------------------
 echo.
 echo Searching for latest version of Java...
-ping -n 1 google.com > nul || goto error
+ping -n 1 google.com > nul || goto networkError
 
-FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -f -s -L %curlExtraOptions% http://javadl-esd.sun.com/update/1.8.0/map-m-1.8.0.xml ^| find /i "https:"') DO set URL1=%%n
+FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -f -s -L %curlExtraOptions% http://javadl-esd.sun.com/update/1.8.0/map-m-1.8.0.xml ^| find /i "https:"') DO set jreInfoUrl=%%n
 if '%%n'=='' goto downloaderror
-FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -f -s -L %curlExtraOptions% %URL1% ^| find /i "<version>"') DO set RemoteJavaVersionFull=%%n
-FOR /F "tokens=1 delims=-" %%n IN ("%RemoteJavaVersionFull%") DO set RemoteJavaVersion=%%n
-if '%RemoteJavaVersion%'=='' goto downloaderror
-if not '%RemoteJavaVersion:~0,3%'=='1.8' goto downloaderror
-echo The latest version of Java is %RemoteJavaVersion%.
-
-
-
+FOR /F "tokens=2 delims=<	> " %%n IN ('curl.exe -f -s -L %curlExtraOptions% %jreInfoUrl% ^| find /i "<version>"') DO set remoteJavaVersionFull=%%n
+FOR /F "tokens=1 delims=-" %%n IN ("%remoteJavaVersionFull%") DO set remoteJavaVersion=%%n
+if '%remoteJavaVersion%'=='' goto downloadError
+if not '%remoteJavaVersion:~0,3%'=='1.8' goto downloadError
+echo The latest version of Java is %remoteJavaVersion%.
 
 ::----------- Find the local Java version-----------------------------------
-set LocalJavaVersion=None
+set localJavaVersion=None
 if defined ProgramFiles(x86) (
   set regPath=HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall
 ) else (
@@ -106,38 +102,32 @@ FOR /F "tokens=1-15" %%n IN ('reg query %regPath% /s 2^> nul') DO (
 
   if '%%n'=='DisplayName' (
     set p=%%p
-    if "!p:~0,4!"=="Java" if not "%%q"=="Auto" if not '!LocalJavaVersion!'=='None' (set LocalJavaVersion=Multi) ELSE (set LocalJavaVersion=!c:~3!)
-    if "!p:~0,4!"=="J2SE" if not '!LocalJavaVersion!'=='None' (set LocalJavaVersion=Multi) ELSE (set LocalJavaVersion=!c:~3!)
+    if "!p:~0,4!"=="Java" if not "%%q"=="Auto" if not '!localJavaVersion!'=='None' (set localJavaVersion=Multi) ELSE (set localJavaVersion=!c:~3!)
+    if "!p:~0,4!"=="J2SE" if not '!localJavaVersion!'=='None' (set localJavaVersion=Multi) ELSE (set localJavaVersion=!c:~3!)
   )
 )
 
-if '%LocalJavaVersion%'=='None' (
+if '%localJavaVersion%'=='None' (
   echo There is no local version of Java.
   if '%installJavaIfMissing%'=='1' (goto download) else (goto noerror)
 )
-if '%LocalJavaVersion%'=='Multi' echo There are multiple local versions of Java installed. & goto download
-echo The local version of Java is %LocalJavaVersion%.
-
-
+if '%localJavaVersion%'=='Multi' echo There are multiple local versions of Java installed. & goto download
+echo The local version of Java is %localJavaVersion%.
 
 ::----------- If they match, skip to the end---------------------------------
-if '%RemoteJavaVersion%'=='%LocalJavaVersion%' (goto finished) ELSE (echo The local version of Java is out of date.)
-
-
+if '%remoteJavaVersion%'=='%localJavaVersion%' (goto finished) ELSE (echo The local version of Java is out of date.)
 
 ::-------------------- Download the latest Java --------------------
 :download
 echo Downloading latest version of Java...
-set url2=http://javadl.sun.com/webapps/download/GetFile/%RemoteJavaVersionFull%/windows-i586/xpiinstall.exe
-curl.exe -f -s -L %curlExtraOptions% -o %tmp%\java_inst.exe %url2%
-if ERRORLEVEL 1 goto downloaderror
-if '%LocalJavaVersion%'=='None' goto install
-
-
+set jreDownloadUrl=http://javadl.sun.com/webapps/download/GetFile/%RemoteJavaVersionFull%/windows-i586/xpiinstall.exe
+curl.exe -f -s -L %curlExtraOptions% -o %tmp%\java_inst.exe %jreDownloadUrl%
+if ERRORLEVEL 1 goto downloadError
+if '%localJavaVersion%'=='None' goto install
 
 ::----------- Uninstall all currently installed java versions----------------
 :uninstall
-if '%LocalJavaVersion%'=='Multi' (echo Uninstalling all local versions of Java...) ELSE (echo Uninstalling the local version of Java...)
+if '%localJavaVersion%'=='Multi' (echo Uninstalling all local versions of Java...) ELSE (echo Uninstalling the local version of Java...)
 FOR /F "tokens=1-4" %%n IN ('reg query %regPath% /s 2^> nul') DO (
 
   if '%%n'=='UninstallString' (
@@ -150,9 +140,8 @@ FOR /F "tokens=1-4" %%n IN ('reg query %regPath% /s 2^> nul') DO (
     if "!d:~0,4!"=="Java" if not "%%q"=="Auto" msiexec.exe !c! /qn /norestart & ping -n 11 127.0.0.1 > nul
     if "!d:~0,4!"=="J2SE" msiexec.exe !c! /qn /norestart & ping -n 11 127.0.0.1 > nul
   )
+
 )
-
-
 
 ::-------------------- Install --------------------
 :install
@@ -161,13 +150,10 @@ start /wait %tmp%\java_inst.exe INSTALL_SILENT=1 REBOOT=0
 ping 127.0.0.1 > nul
 del %tmp%\java_inst.exe
 
-
-
 ::----------- Up to date ----------------------------------------------------
 :finished
 echo Your Java is up to date.
 echo.
-
 
 ::----------- There was an error---------------------------------------------
 goto noerror
@@ -182,9 +168,9 @@ echo Please configure it manually, or change
 echo 'set dontInstallCurl=1' to 'set dontInstallCurl=0'
 echo in this batch file to allow automatic installation
 goto noerror
-:downloaderror
+:downloadError
 echo.
-echo There was a network error. Please try again later.
+echo There was a download error. Please try again later.
 goto noerror
 :noerror
 
