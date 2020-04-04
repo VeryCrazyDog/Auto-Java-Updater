@@ -1,6 +1,6 @@
 # Auto-Java-Updater
 
-**This batch script is no longer maintenance and did not work as well when Oracle implemented additional server side checking to prevent direct download.**
+**WARNING: This batch script is no longer maintenance and did not work as well when Oracle implemented additional server side checking to prevent direct download.**
 
 Keep Java up to date in Windows! Remove redundant installations!
 
